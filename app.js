@@ -21,11 +21,15 @@ app.get('/student', (req, res) => {
     res.render('student');
 });
 
+app.post('/student', (req, res) => {
+    res.render('student');
+});
+
 app.get('/teacher', (req, res) => {
     res.render('teacher');
 });
 
-// サーバーの起動
+// サーバーの起動結果
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Design Catalyst Timetable - Form Extension
+   ご提示いただいたCSSスタイルを継承・拡張
+   ========================================================================== */
+
+/* 1. Base Styles (ご提示いただいたものをそのまま継承) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  background-color: #f4f7f6; /* 継承 */
+  color: #333333; /* 継承 */
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+/* 2. Container Style (継承 & フォーム用に調整) */
+.timetable-container {
+  width: 100%;
+  max-width: 650px; /* フォーム用に少しスリムに */
+  background: #ffffff;
+  padding: 30px; /* 少しリッチに */
+  border-radius: 16px; /* 継承 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); /* 継承 */
+  margin: auto; /* 中央配置 */
+}
+
+/* 3. Header Styles (継承) */
+.header-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+h2 {
+  color: #2c3e50; /* 継承 */
+  font-size: 1.6rem;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #7f8c8d; /* 継承 */
+  margin-bottom: 28px;
+  font-weight: 500;
+}
+
+/* 4. Form Layout (Grid) */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr); /* スマホデフォルト */
+  gap: 18px; /* 項目間の余白 */
+}
+
+/* タブレット・PC向けに2列に */
+@media (min-width: 600px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.col-span-2 {
+  grid-column: span 1;
+}
+
+@media (min-width: 600px) {
+  .col-span-2 {
+    grid-column: span 2;
+  }
+}
+
+/* 5. Form Group & Label (モーダルスタイルを継承) */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: #7f8c8d; /* 継承 */
+  font-weight: bold;
+  padding-left: 2px;
+}
+
+.required-mark {
+  color: #e11d48; /* Editモードのローズ色を必須マークに */
+  margin-left: 2px;
+}
+
+/* 6. Form Inputs (モーダルのスタイルをベースにリッチ化) */
+.form-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid #cbd5e1; /* 継承 */
+  border-radius: 8px; /* 継承 */
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: #333;
+  outline: none;
+  background-color: #fff;
+  transition: all 0.2s ease; /* アニメーション追加 */
+}
+
+/* ホバー時の挙動（少しボーダーを濃く） */
+.form-input:hover {
+  border-color: #94a3b8;
+}
+
+/* フォーカス時のリッチな挙動（ブルーの光彩） */
+.form-input:focus {
+  border-color: #3498db; /* 継承（メインブルー） */
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15); /* 洗練された光彩エフェクト */
+}
+
+/* テキストエリア特有 */
+.form-textarea {
+  resize: vertical; /* 縦方向のみリサイズ可能 */
+  line-height: 1.5;
+}
+
+/* セレクトボックス特有（少し右側に余白） */
+select.form-input {
+  appearance: none; /* デフォルトのアローを消す */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237f8c8d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+}
+
+/* 7. Form Actions (モーダルアクションを継承) */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0; /* 区切り線 */
+}
+
+/* 8. Buttons (共通ボタンスタイルを継承) */
+.btn {
+  padding: 11px 24px;
+  border: none;
+  border-radius: 8px; /* 継承 */
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel {
+  background: #f1f5f9; /* 継承 */
+  color: #64748b; /* 継承 */
+}
+
+.btn-cancel:hover {
+  background: #e2e8f0; /* 継承 */
+  transform: translateY(-1px);
+}
+
+.btn-save {
+  background: #3498db; /* 継承 */
+  color: #ffffff; /* 継承 */
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2); /* ブルーのシャドウ */
+}
+
+.btn-save:hover {
+  background: #2980b9; /* 継承 */
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(52, 152, 219, 0.3);
+}
+
+/* ボタンクリック時のフィードバック */
+.btn:active {
+  transform: translateY(1px);
+}
