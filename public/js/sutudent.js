@@ -1,5 +1,5 @@
-// 通常期間用データ
-const currentNormalState = [
+// 初期データ（サーバーにデータがまだ無い場合のバックアップ）
+let currentNormalState = [
   { type: 'time', html: '<span>1限</span><br>09:05-09:55' },
   { type: 'subject', name: '数学I', class: 'math', detail: '教科書P.10からスタート。ノート提出あり。' },
   { type: 'subject', name: '英語コミ', class: 'english', detail: '単語テスト第1回。範囲は1〜50。' },
@@ -52,8 +52,7 @@ const currentNormalState = [
   { type: 'subject', name: '', class: 'empty', detail: '' }
 ];
 
-// テスト期間用データ
-const currentTestState = [
+let currentTestState = [
   { type: 'time', html: '<span>1限</span><br>09:05-09:55' },
   { type: 'subject', name: '数Iテスト', class: 'test-sub', detail: '範囲：因数分解〜二次関数。' },
   { type: 'subject', name: '現文テスト', class: 'test-sub', detail: '範囲：羅生門、漢字テスト。' },
@@ -100,18 +99,55 @@ let isTestPeriod = false;
 let activeCellIndex = null;
 let activeTargetDateKey = null;
 
-// 各種ツールのステート
 let calcInput = '0';
 let swInterval = null;
 let swElapsedTime = 0;
 
+// ----------------------------------------------------
+// 🌐 サーバーAPI通信用関数（データ同期）
+// ----------------------------------------------------
+async function fetchServerTimetable() {
+  try {
+    const res = await fetch('/api/timetable');
+    const data = await res.json();
+    if (data && data.normal && data.normal.length > 0) {
+      currentNormalState = data.normal;
+      currentTestState = data.test;
+      testDates = data.dates;
+    }
+  } catch (err) {
+    console.error('データ取得失敗:', err);
+  }
+}
+
+async function saveServerTimetable() {
+  try {
+    await fetch('/api/timetable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        normal: currentNormalState,
+        test: currentTestState,
+        dates: testDates
+      })
+    });
+  } catch (err) {
+    console.error('データ保存失敗:', err);
+  }
+}
+
+// ----------------------------------------------------
+// 画面描画ロジック
+// ----------------------------------------------------
 function renderDates() {
   for (let key in testDates) {
     const element = document.getElementById(`date-${key}`);
-    if (testDates[key].month && testDates[key].day) {
-      element.innerText = `${testDates[key].month}/${testDates[key].day}`;
-    } else {
-      element.innerText = `--/--`;
+    if (element) {
+      if (testDates[key].month && testDates[key].day) {
+        element.innerText = `${testDates[key].month}/${testDates[key].day}`;
+      } else {
+        element.innerText = `--/--`;
+      }
     }
   }
 }
@@ -174,19 +210,19 @@ function handleDateClick(dayKey) {
   const currentData = testDates[dayKey];
 
   modalBox.innerHTML = `
-                <h3>${dayLabels[dayKey]} の日付編集</h3>
-                <div class="form-group">
-                    <label>設定する日付</label>
-                    <div class="date-input-group">
-                        <input type="number" id="inputMonth" value="${currentData.month}" min="1" max="12" placeholder="月"> 月
-                        <input type="number" id="inputDay" value="${currentData.day}" min="1" max="31" placeholder="日"> 日
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-cancel" id="btnDateCancel">キャンセル</button>
-                    <button class="btn btn-save" id="btnDateSave">保存する</button>
-                </div>
-            `;
+    <h3>${dayLabels[dayKey]} の日付編集</h3>
+    <div class="form-group">
+        <label>設定する日付</label>
+        <div class="date-input-group">
+            <input type="number" id="inputMonth" value="${currentData.month}" min="1" max="12" placeholder="月"> 月
+            <input type="number" id="inputDay" value="${currentData.day}" min="1" max="31" placeholder="日"> 日
+        </div>
+    </div>
+    <div class="modal-actions">
+        <button class="btn btn-cancel" id="btnDateCancel">キャンセル</button>
+        <button class="btn btn-save" id="btnDateSave">保存する</button>
+    </div>
+  `;
 
   document.getElementById('btnDateSave').addEventListener('click', saveDateData);
   document.getElementById('btnDateCancel').addEventListener('click', closeModal);
@@ -194,7 +230,7 @@ function handleDateClick(dayKey) {
   document.getElementById('inputMonth').focus();
 }
 
-function saveDateData() {
+async function saveDateData() {
   const m = document.getElementById('inputMonth').value.trim();
   const d = document.getElementById('inputDay').value.trim();
 
@@ -205,8 +241,10 @@ function saveDateData() {
     testDates[activeTargetDateKey].month = "";
     testDates[activeTargetDateKey].day = "";
   }
+  
   closeModal();
   renderTimetable();
+  await saveServerTimetable(); // サーバーへ同期保存
 }
 
 function handleCellClick(stateIndex) {
@@ -219,20 +257,20 @@ function handleCellClick(stateIndex) {
 
   if (isEditMode) {
     modalBox.innerHTML = `
-                    <h3>授業情報の編集</h3>
-                    <div class="form-group">
-                        <label>授業名</label>
-                        <input type="text" id="inputSubject" value="${currentName}" placeholder="授業名を入力">
-                    </div>
-                    <div class="form-group">
-                        <label>授業の詳細・メモ</label>
-                        <textarea id="inputDetail" rows="4" placeholder="範囲、持ち物など…">${data.detail || ''}</textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button class="btn btn-cancel" id="btnCancel">キャンセル</button>
-                        <button class="btn btn-save" id="btnSave">保存する</button>
-                    </div>
-                `;
+      <h3>授業情報の編集</h3>
+      <div class="form-group">
+          <label>授業名</label>
+          <input type="text" id="inputSubject" value="${currentName}" placeholder="授業名を入力">
+      </div>
+      <div class="form-group">
+          <label>授業の詳細・メモ</label>
+          <textarea id="inputDetail" rows="4" placeholder="範囲、持ち物など…">${data.detail || ''}</textarea>
+      </div>
+      <div class="modal-actions">
+          <button class="btn btn-cancel" id="btnCancel">キャンセル</button>
+          <button class="btn btn-save" id="btnSave">保存する</button>
+      </div>
+    `;
     document.getElementById('btnSave').addEventListener('click', saveCellData);
     document.getElementById('btnCancel').addEventListener('click', closeModal);
     modalOverlay.classList.add('active');
@@ -240,18 +278,18 @@ function handleCellClick(stateIndex) {
   } else {
     if (!data.name) return;
     modalBox.innerHTML = `
-                    <h3>${data.name} の詳細</h3>
-                    <div class="view-detail-text">${currentDetail}</div>
-                    <div class="modal-actions">
-                        <button class="btn btn-close" id="btnClose">閉じる</button>
-                    </div>
-                `;
+      <h3>${data.name} の詳細</h3>
+      <div class="view-detail-text">${currentDetail}</div>
+      <div class="modal-actions">
+          <button class="btn btn-close" id="btnClose">閉じる</button>
+      </div>
+    `;
     document.getElementById('btnClose').addEventListener('click', closeModal);
     modalOverlay.classList.add('active');
   }
 }
 
-function saveCellData() {
+async function saveCellData() {
   const activeState = isTestPeriod ? currentTestState : currentNormalState;
   const newName = document.getElementById('inputSubject').value.trim();
   const newDetail = document.getElementById('inputDetail').value.trim();
@@ -269,38 +307,37 @@ function saveCellData() {
 
   closeModal();
   renderTimetable();
+  await saveServerTimetable(); // サーバーへ同期保存
 }
 
-// 電卓ポップアップ表示
-openCalcBtn.addEventListener('click', () => {
+// --- ツール類（電卓・タイマー・メッセージ）---
+openCalcBtn?.addEventListener('click', () => {
   calcInput = '0';
   modalBox.innerHTML = `
-                <h3>ミニ電卓</h3>
-                <div class="calc-screen" id="calcScreen">0</div>
-                <div class="calculator-grid">
-                    <button class="calc-btn clear" onclick="pressCalc('C')">C</button>
-                    <button class="calc-btn backspace" onclick="pressCalc('⌫')">⌫</button>
-                    <button class="calc-btn operator" onclick="pressCalc('÷')">÷</button>
-                    <button class="calc-btn operator" onclick="pressCalc('×')">×</button>
-                    <button class="calc-btn" onclick="pressCalc('7')">7</button>
-                    <button class="calc-btn" onclick="pressCalc('8')">8</button>
-                    <button class="calc-btn" onclick="pressCalc('9')">9</button>
-                    <button class="calc-btn operator" onclick="pressCalc('-')">-</button>
-                    <button class="calc-btn" onclick="pressCalc('4')">4</button>
-                    <button class="calc-btn" onclick="pressCalc('5')">5</button>
-                    <button class="calc-btn" onclick="pressCalc('6')">6</button>
-                    <button class="calc-btn operator" onclick="pressCalc('+')">+</button>
-                    <button class="calc-btn" onclick="pressCalc('1')">1</button>
-                    <button class="calc-btn" onclick="pressCalc('2')">2</button>
-                    <button class="calc-btn" onclick="pressCalc('3')">3</button>
-                    <button class="calc-btn" onclick="pressCalc('.')">.</button>
-                    <button class="calc-btn" style="grid-column: span 2" onclick="pressCalc('0')">0</button>
-                    <button class="calc-btn equal" onclick="pressCalc('=')">=</button>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-close" onclick="closeModal()">閉じる</button>
-                </div>
-            `;
+    <h3>ミニ電卓</h3>
+    <div class="calc-screen" id="calcScreen">0</div>
+    <div class="calculator-grid">
+        <button class="calc-btn clear" onclick="pressCalc('C')">C</button>
+        <button class="calc-btn backspace" onclick="pressCalc('⌫')">⌫</button>
+        <button class="calc-btn operator" onclick="pressCalc('÷')">÷</button>
+        <button class="calc-btn operator" onclick="pressCalc('×')">×</button>
+        <button class="calc-btn" onclick="pressCalc('7')">7</button>
+        <button class="calc-btn" onclick="pressCalc('8')">8</button>
+        <button class="calc-btn" onclick="pressCalc('9')">9</button>
+        <button class="calc-btn operator" onclick="pressCalc('-')">-</button>
+        <button class="calc-btn" onclick="pressCalc('4')">4</button>
+        <button class="calc-btn" onclick="pressCalc('5')">5</button>
+        <button class="calc-btn" onclick="pressCalc('6')">6</button>
+        <button class="calc-btn operator" onclick="pressCalc('+')">+</button>
+        <button class="calc-btn" onclick="pressCalc('1')">1</button>
+        <button class="calc-btn" onclick="pressCalc('2')">2</button>
+        <button class="calc-btn" onclick="pressCalc('3')">3</button>
+        <button class="calc-btn" onclick="pressCalc('.')">.</button>
+        <button class="calc-btn" style="grid-column: span 2" onclick="pressCalc('0')">0</button>
+        <button class="calc-btn equal" onclick="pressCalc('=')">=</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-close" onclick="closeModal()">閉じる</button></div>
+  `;
   modalOverlay.classList.add('active');
 });
 
@@ -316,20 +353,17 @@ window.pressCalc = function (val) {
   screen.innerText = calcInput;
 };
 
-// ストップウォッチ表示
-openTimerBtn.addEventListener('click', () => {
+openTimerBtn?.addEventListener('click', () => {
   modalBox.innerHTML = `
-                <h3>ストップウォッチ</h3>
-                <div class="stopwatch-display" id="swDisplay">00:00.00</div>
-                <div class="stopwatch-actions">
-                    <button class="sw-btn start" onclick="startStopwatch()">スタート</button>
-                    <button class="sw-btn stop" onclick="stopStopwatch()">ストップ</button>
-                    <button class="sw-btn reset" onclick="resetStopwatch()">リセット</button>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-close" onclick="closeModal()">閉じる</button>
-                </div>
-            `;
+    <h3>ストップウォッチ</h3>
+    <div class="stopwatch-display" id="swDisplay">00:00.00</div>
+    <div class="stopwatch-actions">
+        <button class="sw-btn start" onclick="startStopwatch()">スタート</button>
+        <button class="sw-btn stop" onclick="stopStopwatch()">ストップ</button>
+        <button class="sw-btn reset" onclick="resetStopwatch()">リセット</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-close" onclick="closeModal()">閉じる</button></div>
+  `;
   modalOverlay.classList.add('active');
   updateStopwatchDisplay();
   if (swInterval) runStopwatchVisuals();
@@ -357,16 +391,15 @@ function updateStopwatchDisplay() {
   display.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(2, '0')}`;
 }
 
-// 先生へのメッセージ送信
-openMessageBtn.addEventListener('click', () => {
+openMessageBtn?.addEventListener('click', () => {
   modalBox.innerHTML = `
-                <h3>先生へのメッセージ送信</h3>
-                <div class="form-group"><label>宛先</label><select id="teacherSelect"><option>佐藤先生（数学）</option><option>鈴木先生（英語）</option><option>渡辺先生（担任）</option></select></div>
-                <div class="form-group"><label>メッセージ内容</label><textarea id="messageContent" rows="5" placeholder="連絡内容を入力..."></textarea></div>
-                <div class="modal-actions"><button class="btn btn-cancel" onclick="closeModal()">キャンセル</button><button class="btn btn-save" id="sendMessageBtn">送信する</button></div>
-            `;
+    <h3>先生へのメッセージ送信</h3>
+    <div class="form-group"><label>宛先</label><select id="teacherSelect"><option>佐藤先生（数学）</option><option>鈴木先生（英語）</option><option>渡辺先生（担任）</option></select></div>
+    <div class="form-group"><label>メッセージ内容</label><textarea id="messageContent" rows="5" placeholder="連絡内容を入力..."></textarea></div>
+    <div class="modal-actions"><button class="btn btn-cancel" onclick="closeModal()">キャンセル</button><button class="btn btn-save" id="sendMessageBtn">送信する</button></div>
+  `;
   modalOverlay.classList.add('active');
-  document.getElementById('sendMessageBtn').addEventListener('click', () => {
+  document.getElementById('sendMessageBtn')?.addEventListener('click', () => {
     const teacher = document.getElementById('teacherSelect').value;
     const content = document.getElementById('messageContent').value.trim();
     if (!content) return alert("内容を入力してください。");
@@ -380,7 +413,7 @@ function closeModal() {
   activeTargetDateKey = null;
 }
 
-toggleEditBtn.addEventListener('click', () => {
+toggleEditBtn?.addEventListener('click', () => {
   isEditMode = !isEditMode;
   toggleEditBtn.classList.toggle('active', isEditMode);
   toggleEditBtn.querySelector('span').innerText = isEditMode ? '閲覧モードへ' : '編集モード';
@@ -388,7 +421,7 @@ toggleEditBtn.addEventListener('click', () => {
   renderTimetable();
 });
 
-toggleTestBtn.addEventListener('click', () => {
+toggleTestBtn?.addEventListener('click', () => {
   isTestPeriod = !isTestPeriod;
   toggleTestBtn.classList.toggle('active', isTestPeriod);
   if (isTestPeriod) {
@@ -402,9 +435,17 @@ toggleTestBtn.addEventListener('click', () => {
 });
 
 ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(key => {
-  document.getElementById(`date-${key}`).addEventListener('click', () => handleDateClick(key));
+  document.getElementById(`date-${key}`)?.addEventListener('click', () => handleDateClick(key));
 });
 
-modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+modalOverlay?.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 
-renderTimetable();
+// ----------------------------------------------------
+// 初期化処理：起動時にサーバーから最新データをロード
+// ----------------------------------------------------
+async function initApp() {
+  await fetchServerTimetable();
+  renderTimetable();
+}
+
+initApp();
