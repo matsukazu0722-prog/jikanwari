@@ -1,0 +1,109 @@
+/* ==========================================
+   時間割画面と完全統一フォームデザイン
+   ========================================== */
+
+/* フォーム全体のラッパー（カード） */
+form {
+  background: #ffffff;
+  padding: 24px 28px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  max-width: 800px;
+  margin: 20px auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+/* フォーム内の各入力フィールドを囲むグループ */
+form > div,
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 180px; /* 横幅に応じて自動で伸縮・改行 */
+}
+
+/* ラベルのスタイル */
+form label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #64748b;
+  margin-left: 2px;
+}
+
+/* 各種入力エリアの共通デザイン */
+input[type="text"],
+input[type="time"],
+select,
+textarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #333333;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* ホバー＆フォーカス時の挙動 */
+input[type="text"]:hover,
+input[type="time"]:hover,
+select:hover,
+textarea:hover {
+  border-color: #94a3b8;
+  background-color: #ffffff;
+}
+
+input[type="text"]:focus,
+input[type="time"]:focus,
+select:focus,
+textarea:focus {
+  background-color: #ffffff;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+
+/* 今日のトピック（textarea）の個別調整 */
+textarea#notes,
+textarea {
+  min-height: 42px;
+  height: 42px;
+  resize: vertical;
+  flex-basis: 100%; /* 横幅いっぱいに広げる */
+}
+
+/* 送信ボタン（右上の「編集モード」ボタン等と統一） */
+button[type="submit"],
+input[type="submit"] {
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  padding: 8px 20px;
+  height: 42px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  margin-left: auto;
+}
+
+button[type="submit"]:hover,
+input[type="submit"]:hover {
+  border-color: #3498db;
+  color: #3498db;
+  background: #f0f9ff;
+  transform: translateY(-1px);
+}
+
+button[type="submit"]:active,
+input[type="submit"]:active {
+  transform: translateY(0);
+}
