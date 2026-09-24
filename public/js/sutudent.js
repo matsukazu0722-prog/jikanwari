@@ -1,4 +1,8 @@
-// 初期データ（サーバーにデータがまだ無い場合のバックアップ）
+// ====================================================
+// 🎓 生徒用 リアルタイム時間割同期スクリプト
+// ====================================================
+
+// 1. 初期データ定義（サーバーからデータを受信するまでのバックアップ）
 let currentNormalState = [
   { type: 'time', html: '<span>1限</span><br>09:05-09:55' },
   { type: 'subject', name: '数学I', class: 'math', detail: '教科書P.10からスタート。ノート提出あり。' },
@@ -83,6 +87,7 @@ let testDates = {
   fri: { month: "7", day: "10" }
 };
 
+// 2. DOM要素の取得
 const toggleEditBtn = document.getElementById('toggleEditBtn');
 const toggleTestBtn = document.getElementById('toggleTestBtn');
 const openCalcBtn = document.getElementById('openCalcBtn');
@@ -104,22 +109,36 @@ let swInterval = null;
 let swElapsedTime = 0;
 
 // ----------------------------------------------------
-// 🌐 サーバーAPI通信用関数（データ同期）
+// 🌐 サーバーAPI通信（同期処理）
 // ----------------------------------------------------
+
+// サーバーから最新データを取得
 async function fetchServerTimetable() {
   try {
     const res = await fetch('/api/timetable');
     const data = await res.json();
-    if (data && data.normal && data.normal.length > 0) {
-      currentNormalState = data.normal;
-      currentTestState = data.test;
-      testDates = data.dates;
+    
+    // データが存在し、配列形式なら反映する
+    if (data) {
+      if (Array.isArray(data.normal) && data.normal.length > 0) {
+        currentNormalState = data.normal;
+      } else if (Array.isArray(data) && data.length > 0) {
+        currentNormalState = data; // 旧互換用
+      }
+
+      if (Array.isArray(data.test) && data.test.length > 0) {
+        currentTestState = data.test;
+      }
+      if (data.dates) {
+        testDates = data.dates;
+      }
     }
   } catch (err) {
-    console.error('データ取得失敗:', err);
+    console.error('データ取得エラー:', err);
   }
 }
 
+// サーバーへ変更内容を送信・共有保存
 async function saveServerTimetable() {
   try {
     await fetch('/api/timetable', {
@@ -132,12 +151,12 @@ async function saveServerTimetable() {
       })
     });
   } catch (err) {
-    console.error('データ保存失敗:', err);
+    console.error('データ保存エラー:', err);
   }
 }
 
 // ----------------------------------------------------
-// 画面描画ロジック
+// 🖥️ 画面描画ロジック
 // ----------------------------------------------------
 function renderDates() {
   for (let key in testDates) {
@@ -153,6 +172,7 @@ function renderDates() {
 }
 
 function renderTimetable() {
+  if (!timetableBody) return;
   timetableBody.innerHTML = '';
   const activeState = isTestPeriod ? currentTestState : currentNormalState;
   let currentRow = null;
@@ -189,6 +209,7 @@ function renderTimetable() {
 }
 
 function updateSubtitle() {
+  if (!statusSubtitle) return;
   if (isEditMode) {
     if (isTestPeriod) {
       statusSubtitle.innerText = `【編集モード】マスを押すと授業変更、曜日の下の「月/日」を押すと日付を変更できます`;
@@ -202,6 +223,7 @@ function updateSubtitle() {
   }
 }
 
+// モーダル編集・表示処理
 function handleDateClick(dayKey) {
   if (!isEditMode || !isTestPeriod) return;
 
@@ -241,10 +263,9 @@ async function saveDateData() {
     testDates[activeTargetDateKey].month = "";
     testDates[activeTargetDateKey].day = "";
   }
-  
   closeModal();
   renderTimetable();
-  await saveServerTimetable(); // サーバーへ同期保存
+  await saveServerTimetable(); // サーバー同期
 }
 
 function handleCellClick(stateIndex) {
@@ -279,7 +300,7 @@ function handleCellClick(stateIndex) {
     if (!data.name) return;
     modalBox.innerHTML = `
       <h3>${data.name} の詳細</h3>
-      <div class="view-detail-text">${currentDetail}</div>
+      <div class="view-detail-text" style="white-space: pre-wrap;">${currentDetail}</div>
       <div class="modal-actions">
           <button class="btn btn-close" id="btnClose">閉じる</button>
       </div>
@@ -307,10 +328,12 @@ async function saveCellData() {
 
   closeModal();
   renderTimetable();
-  await saveServerTimetable(); // サーバーへ同期保存
+  await saveServerTimetable(); // サーバー同期
 }
 
-// --- ツール類（電卓・タイマー・メッセージ）---
+// ----------------------------------------------------
+// 🧮 ツール類（電卓・ストップウォッチ・メッセージ）
+// ----------------------------------------------------
 openCalcBtn?.addEventListener('click', () => {
   calcInput = '0';
   modalBox.innerHTML = `
@@ -408,7 +431,7 @@ openMessageBtn?.addEventListener('click', () => {
 });
 
 function closeModal() {
-  modalOverlay.classList.remove('active');
+  modalOverlay?.classList.remove('active');
   activeCellIndex = null;
   activeTargetDateKey = null;
 }
@@ -425,10 +448,10 @@ toggleTestBtn?.addEventListener('click', () => {
   isTestPeriod = !isTestPeriod;
   toggleTestBtn.classList.toggle('active', isTestPeriod);
   if (isTestPeriod) {
-    timetableTitle.innerText = '週間時間割（テスト期間）';
+    if (timetableTitle) timetableTitle.innerText = '週間時間割（テスト期間）';
     document.body.classList.add('test-period-active');
   } else {
-    timetableTitle.innerText = '週間時間割（通常期）';
+    if (timetableTitle) timetableTitle.innerText = '週間時間割（通常期）';
     document.body.classList.remove('test-period-active');
   }
   renderTimetable();
@@ -441,7 +464,7 @@ toggleTestBtn?.addEventListener('click', () => {
 modalOverlay?.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 
 // ----------------------------------------------------
-// 初期化処理：起動時にサーバーから最新データをロード
+// 🚀 アプリ初期化：ページ読み込み時に最新データを取得
 // ----------------------------------------------------
 async function initApp() {
   await fetchServerTimetable();
