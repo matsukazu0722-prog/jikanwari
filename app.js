@@ -8,13 +8,15 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 🌟 JSONデータを正しくパースするための設定（超重要）
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 全端末で共有するデータ保持用（グローバル変数）
+// 🌟 サーバー側で全端末共有のデータオブジェクトを保持
 let sharedTimetableData = {
   normal: [],
   test: [],
@@ -26,15 +28,15 @@ app.get('/api/timetable', (req, res) => {
   res.json(sharedTimetableData);
 });
 
-// 2. 生徒・先生のどちらからでも更新可能な保存 API
+// 2. データ保存・全体更新 API
 app.post('/api/timetable', (req, res) => {
-  if (req.body && (req.body.normal || req.body.test)) {
+  // 受信したデータが存在すれば更新
+  if (req.body) {
     sharedTimetableData = req.body;
-    console.log('【データ更新成功】全端末へ共有可能になりました');
-    res.json({ status: 'success', data: sharedTimetableData });
-  } else {
-    res.status(400).json({ status: 'error', message: 'Invalid data format' });
+    console.log('【サーバーデータ更新完了】', new Date().toLocaleTimeString());
+    return res.json({ status: 'success', data: sharedTimetableData });
   }
+  res.status(400).json({ status: 'error', message: 'No data received' });
 });
 
 // ルーティング
